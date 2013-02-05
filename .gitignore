@@ -8,6 +8,10 @@
 *.so
 *.opt
 *.obj
+*.pp
+*.mk
+*.map
+makefile
 
 # Packages #
 ############
