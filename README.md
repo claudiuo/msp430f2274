@@ -1,0 +1,1 @@
+Just a collection of simple code for MSP430F2274 (used in the EZ430-RF2500 board).
