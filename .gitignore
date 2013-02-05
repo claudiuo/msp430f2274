@@ -6,6 +6,8 @@
 *.exe
 *.o
 *.so
+*.opt
+*.obj
 
 # Packages #
 ############
@@ -40,3 +42,6 @@ Thumbs.db
 # Workspace files #
 ###################
 .metadata
+.settings
+.cdt*
+.*project
