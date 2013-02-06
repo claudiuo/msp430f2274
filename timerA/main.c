@@ -1,5 +1,8 @@
 #include "msp430.h"
 #include "in430.h"
+
+void toggleLeds(int);
+
 int main(void)
 {
 	// init watchdog timer to off
@@ -20,20 +23,6 @@ int main(void)
 
     __bis_SR_register( GIE + LPM4_bits );   // Enable interrupts and sleep
 
-//	int i = 0;
-//	while(1)
-//	{
-//		// toggle LEDs
-//		P1OUT ^= 0x03;
-//		for ( i=0; i<10000; i++) {
-//			__no_operation();
-//	 	}
-//	 	// turn off one LED
-//	 	P1OUT &= ~0x01;
-//		for ( i=0; i<10000; i++) {
-//			__no_operation();
-//	 	}
-//	}
 }
 
 // ISR for button
@@ -42,6 +31,26 @@ interrupt void Port_1 ( void )
 {
 	// clear interrupt flag
 	P1IFG &= ~0x04;
-	// toggle LEDs
-    P1OUT ^=  0x03;
+	toggleLeds(5);
+	// turn off LEDs
+	P1OUT &= ~0x03;
+}
+
+void toggleLeds (int howMany)
+{
+	int i,j = 0;
+	const unsigned int LIMIT = 5000;
+    for ( j=0; j<howMany; j++) {
+
+		// toggle LEDs
+		P1OUT ^= 0x03;
+		for ( i=0; i<LIMIT; i++) {
+			__no_operation();
+	 	}
+	 	// turn off one LED
+	 	P1OUT &= ~0x01;
+		for ( i=0; i<LIMIT; i++) {
+			__no_operation();
+	 	}
+	}
 }
