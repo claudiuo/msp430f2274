@@ -12,6 +12,7 @@
 *.mk
 *.map
 makefile
+*.out
 
 # Packages #
 ############
