@@ -12,3 +12,4 @@ What I want to do:
 - init TimerA sourced from VLO (if possible divide /8 so it takes longer to count)
 - if nothing happens when TimerA interrupts, place the MCU into sleep again
 - if more stuff happens (to start with, button is pressed again), restart the timer
+- add P2.3 interrupt on edge low-to-high to use with the 0g accelerometer pin
