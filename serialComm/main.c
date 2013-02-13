@@ -1,7 +1,5 @@
 #include "msp430.h"
 #include "in430.h"
-//#include "bsp_config.h"
-//#include "virtual_com_cmds.h"
 
 const unsigned int FAST = 10000;
 const unsigned int SLOW = 10000;
@@ -12,8 +10,6 @@ void toggleLeds(int,int,unsigned int);
 void doIsrWork(int);
 void TXStr( char* string, int length );
 
-//const char splash[] = {"\r\n--------------------------------------------------  \r\n     ****\r\n     ****           eZ430-RF2500\r\n     ******o****    Temperature Sensor Network\r\n********_///_****   Copyright 2009\r\n ******/_//_/*****  Texas Instruments Incorporated\r\n  ** ***(__/*****   All rights reserved.\r\n      *********     SimpliciTI1.1.1\r\n       *****\r\n        ***\r\n--------------------------------------------------\r\n"};
-
 int main(void)
 {
     WDTCTL = WDTPW + WDTHOLD; // init watchdog timer to off
@@ -22,13 +18,6 @@ int main(void)
     {
         while(1);                               // do not load, trap CPU!!
     }
-    // for reference COM setup using bsp fucntions; needs bsp_config.h,
-    // virtual_com_cmds.h and virtual_com_cmds.c added to the project
-    // to be replaced with direct setup of serial port from sample code
-    // configure internal digitally controlled oscillator
-//    DCOCTL  = BSP_CONFIG_MSP430_DCOCTL;
-//    BCSCTL1 = BSP_CONFIG_MSP430_BCSCTL1;
-//    COM_Init();    // Initialize serial port
 
     // setup serial communication
     DCOCTL = 0;                               // Select lowest DCOx and MODx settings
