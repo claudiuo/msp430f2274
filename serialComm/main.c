@@ -8,7 +8,8 @@ unsigned int timerCount = 0; // use it to count timer overflows
 
 void toggleLeds(int,int,unsigned int);
 void doIsrWork(int);
-void TXStr( char* string, int length );
+void printf(char *, ...);
+void sendByte(unsigned char);
 
 int main(void)
 {
@@ -67,7 +68,7 @@ ADC10CTL1 = INCH_10 + ADC10DIV_3;         // Temp Sensor ADC10CLK/4
 #pragma vector=PORT1_VECTOR    // button ISR
 interrupt void Port_1 ( void )
 {
-    TXStr( "\r\nRestart button", 16 );
+    printf( "\r\nRestart button" );
     doIsrWork(BIT0);
     P1IFG &= ~0x04;               // clear interrupt flag
 }
@@ -75,7 +76,7 @@ interrupt void Port_1 ( void )
 #pragma vector=PORT2_VECTOR    // P2 ISR
 interrupt void Port_2 ( void )
 {
-    TXStr( "\r\nRestart port2", 15 );
+    printf( "\r\nRestart port2" );
     doIsrWork(BIT1);
     P2IFG &= ~BIT3;               // clear interrupt flag
 }
@@ -83,7 +84,6 @@ interrupt void Port_2 ( void )
 #pragma vector=TIMERA0_VECTOR    // Timer A ISR
 interrupt void Timer_A ( void )
 {
-    char output_verbose[6] = {"\r\nXXXX"};
     int result;
 
     P1OUT &= ~0x03;                // turn off LEDs
@@ -92,16 +92,15 @@ interrupt void Timer_A ( void )
 
     switch(TAIV) {
         case TAIV_NONE:
-            if(timerCount++ == 4) { // this happens after 10s
-                TACTL = MC_0;       // timer halted
+            if(++timerCount == 5) {  // 10s
+                TACTL = MC_0;        // timer halted
                 // equivalent: TACTL &= ~(MC_1);
             } else {
                 // get the ADC value
                 ADC10CTL0 |= ENC + ADC10SC;      // Sampling and conversion start
                 __bis_SR_register(LPM3_bits + GIE); // LPM0, ADC10_ISR will force exit
                 result = ADC10MEM;               // Retrieve result
-                output_verbose[3] = '0'+result;
-                TXStr( output_verbose, sizeof output_verbose );
+                printf("\r\ntemp value %i", result);
                 /* Stop and turn off ADC */
                 ADC10CTL0 &= ~ENC;
                 __bis_SR_register(LPM3_bits + GIE); // LPM0, ADC10_ISR will force exit
@@ -114,15 +113,15 @@ interrupt void Timer_A ( void )
 #pragma vector=ADC10_VECTOR
 __interrupt void ADC10_ISR(void)
 {
-    TXStr( "\r\nADC", 5 );
+    printf("\r\nADC");
     __bic_SR_register_on_exit(LPM3_bits);        // Clear CPUOFF bit from 0(SR)
 }
 
 void doIsrWork (int led)
 {
     P1OUT &= ~0x03;               // turn off LEDs
-    toggleLeds(2,SLOW,led);      // blink red/green LED to signal P1/P2 ISR
-    P1OUT &= ~led;     		      // turn off LED that was blinking
+    toggleLeds(2,SLOW,led);       // blink red/green LED to signal P1/P2 ISR
+    P1OUT |= 0x03;     		      // turn on LEDs
 
     timerCount = 0;               // reset the timerCount
     // (re)start the timer
@@ -168,13 +167,24 @@ void toggleBothLeds (int howMany, int timeout )
     }
 }
 
-void TXStr( char* string, int length )
+void puts(char *s) {
+    char c;
+
+    // Loops through each character in string 's'
+    while (c = *s++) {
+        sendByte(c);
+    }
+}
+
+void putc(unsigned b) {
+    sendByte(b);
+}
+
+/**
+ * Sends a single byte out through UART
+ **/
+void sendByte(unsigned char byte )
 {
-  int pointer;
-  for( pointer = 0; pointer < length; pointer++)
-  {
-    volatile int i;
-    UCA0TXBUF = string[pointer];
-    while (!(IFG2&UCA0TXIFG));              // USCI_A0 TX buffer ready?
-  }
+    while (!(IFG2&UCA0TXIFG));			// USCI_A0 TX buffer ready?
+    UCA0TXBUF = byte;					// TX -> character
 }
