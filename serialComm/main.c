@@ -51,9 +51,23 @@ int main(void)
 
     // set up ADC
 //    ADC10CTL1 = ADC10DF;                        // Conversion code signed format ref.to AVcc
-ADC10CTL1 = INCH_10 + ADC10DIV_3;         // Temp Sensor ADC10CLK/4
-    ADC10CTL0 = ADC10SHT_2 + ADC10ON + ADC10IE; // ADC10ON, interrupt enabled
-    ADC10AE0 |= 0x01;                           // P2.0 ADC option select
+//    ADC10CTL0 = ADC10SHT_2 + ADC10ON + ADC10IE; // ADC10ON, interrupt enabled
+//    ADC10AE0 |= 0x01;                           // P2.0 ADC option select
+
+    // get temperature: code from sample app
+          /* Get temperature */
+          ADC10CTL1 = INCH_10 + ADC10DIV_4;       // Temp Sensor ADC10CLK/5
+          ADC10CTL0 = SREF_1 + ADC10SHT_3 + REFON + ADC10ON + ADC10IE + ADC10SR;
+          /* Allow ref voltage to settle for at least 30us (30us * 1MHz = 30 cycles)
+           * See SLAS504D for settling time spec
+           */
+          __delay_cycles(30);
+
+            /* Get voltage */
+//          ADC10CTL1 = INCH_11;                     // AVcc/2
+//          ADC10CTL0 = SREF_1 + ADC10SHT_2 + REFON + ADC10ON + ADC10IE + REF2_5V;
+//          __delay_cycles(30);
+
 
     // set up Timer A
     BCSCTL3 |= LFXT1S_2;        // ACLK on sourced to the VLO
@@ -84,7 +98,9 @@ interrupt void Port_2 ( void )
 #pragma vector=TIMERA0_VECTOR    // Timer A ISR
 interrupt void Timer_A ( void )
 {
-    int result;
+    volatile long temp;
+    volatile long IntDegF;
+    volatile long IntDegC;
 
     P1OUT &= ~0x03;                // turn off LEDs
     toggleLeds(2,SLOW,BIT0+BIT1); // blink both LEDs slow to signal timer ISR
@@ -98,12 +114,23 @@ interrupt void Timer_A ( void )
             } else {
                 // get the ADC value
                 ADC10CTL0 |= ENC + ADC10SC;      // Sampling and conversion start
-                __bis_SR_register(LPM3_bits + GIE); // LPM0, ADC10_ISR will force exit
-                result = ADC10MEM;               // Retrieve result
-                printf("\r\ntemp value %i", result);
+                __bis_SR_register(CPUOFF + GIE); // LPM0, ADC10_ISR will force exit
+                //volt = (result*25)/512;
+
+                // oF = ((A10/1024)*1500mV)-923mV)*1/1.97mV = A10*761/1024 - 468
+                temp = ADC10MEM;
+                IntDegF = ((temp - 630) * 761) / 1024;
+
+                // oC = ((A10/1024)*1500mV)-986mV)*1/3.55mV = A10*423/1024 - 278
+                temp = ADC10MEM;
+                IntDegC = ((temp - 673) * 423) / 1024;
+
+                printf("\r\ntemp F %l", IntDegF);
+                printf("\r\ntemp C %l", IntDegC);
+
                 /* Stop and turn off ADC */
                 ADC10CTL0 &= ~ENC;
-                __bis_SR_register(LPM3_bits + GIE); // LPM0, ADC10_ISR will force exit
+                __bis_SR_register(LPM3_bits + GIE); // LPM3, Timer_A ISR will force exit
             }
             break;
     }
@@ -114,7 +141,7 @@ interrupt void Timer_A ( void )
 __interrupt void ADC10_ISR(void)
 {
     printf("\r\nADC");
-    __bic_SR_register_on_exit(LPM3_bits);        // Clear CPUOFF bit from 0(SR)
+    __bic_SR_register_on_exit(CPUOFF);        // Clear CPUOFF bit from 0(SR)
 }
 
 void doIsrWork (int led)
