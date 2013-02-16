@@ -5,6 +5,7 @@ const unsigned int FAST = 10000;
 const unsigned int SLOW = 10000;
 
 unsigned int timerCount = 0; // use it to count timer overflows
+unsigned int res[3]; //for holding the conversion results
 
 void toggleLeds(int,int,unsigned int);
 void doIsrWork(int);
@@ -50,9 +51,10 @@ int main(void)
     P2IE  |=  BIT3; // enable interrupts on P2.3
 
     // set up ADC
-//    ADC10CTL1 = ADC10DF;                        // Conversion code signed format ref.to AVcc
-    ADC10CTL0 = ADC10SHT_2 + ADC10ON + ADC10IE; // ADC10ON, interrupt enabled
-    ADC10AE0 |= 0x01;                           // P2.0 ADC option select
+    ADC10CTL1 = INCH_2 + CONSEQ_1;            // A2/A1/A0, single sequence
+    ADC10CTL0 = ADC10SHT_2 + MSC + ADC10ON + ADC10IE;
+    ADC10DTC1 = 0x03;                         // 3 conversions
+    ADC10AE0 |= 0x07;                         // P2.2,1,0 ADC10 option select
     __delay_cycles(30); // allow ref voltage to settle for at least 30us
                         // (30us * 1MHz = 30 cycles): see SLAS504D for info
 
@@ -85,9 +87,6 @@ interrupt void Port_2 ( void )
 #pragma vector=TIMERA0_VECTOR    // Timer A ISR
 interrupt void Timer_A ( void )
 {
-    volatile int adcVal;
-    volatile long result;
-
     P1OUT &= ~0x03;                // turn off LEDs
     toggleLeds(2,SLOW,BIT0+BIT1); // blink both LEDs slow to signal timer ISR
     P1OUT &= ~0x03;                // turn off LEDs
@@ -98,14 +97,16 @@ interrupt void Timer_A ( void )
                 TACTL = MC_0;        // timer halted
                 // equivalent: TACTL &= ~(MC_1);
             } else {
+                ADC10SA = (int)res;              // Data buffer start
                 // get the ADC value
                 ADC10CTL0 |= ENC + ADC10SC;      // Sampling and conversion start
                 __bis_SR_register(CPUOFF + GIE); // LPM0, ADC10_ISR will force exit
 
-                adcVal = ADC10MEM;
-                result = ((adcVal - 630) * 761) / 1024;
-                printf("\r\nvalue read %i", adcVal);
-                printf("\r\nvalue calc %l", result);
+                // read results
+                int i;
+                for (i = 0; i < 3; i++) {
+                    printf("\r\nvalue read %i", res[i]);
+                }
 
                 /* Stop and turn off ADC */
                 ADC10CTL0 &= ~ENC;
